@@ -54,6 +54,27 @@ SCHEMA_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id)",
     "CREATE INDEX IF NOT EXISTS idx_predictions_competition ON predictions(competition_id)",
     "CREATE INDEX IF NOT EXISTS idx_match_results_competition ON match_results(competition_id)",
+    """CREATE TABLE IF NOT EXISTS leagues (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        creator_id INTEGER NOT NULL REFERENCES users(id),
+        invite_code TEXT UNIQUE NOT NULL,
+        entry_fee INTEGER DEFAULT 0,
+        competition_id INTEGER DEFAULT 2000,
+        status TEXT DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""",
+    """CREATE TABLE IF NOT EXISTS league_members (
+        id SERIAL PRIMARY KEY,
+        league_id INTEGER NOT NULL REFERENCES leagues(id),
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        paid BOOLEAN DEFAULT FALSE,
+        telegram_payment_charge_id TEXT,
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(league_id, user_id)
+    )""",
+    "CREATE INDEX IF NOT EXISTS idx_league_members_league ON league_members(league_id)",
+    "CREATE INDEX IF NOT EXISTS idx_league_members_user ON league_members(user_id)",
 ]
 
 DEFAULT_COMPETITIONS = [

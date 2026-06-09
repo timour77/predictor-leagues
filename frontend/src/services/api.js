@@ -61,4 +61,13 @@ export const api = {
     const params = competitionId ? `?competition_id=${competitionId}` : ''
     return request('GET', `/leaderboard/me${params}`)
   },
+
+  // Leagues
+  createLeague: (name, entryFee) => request('POST', '/leagues', { name, entry_fee: entryFee }),
+  getMyLeagues: () => request('GET', '/leagues/my'),
+  getLeague: (inviteCode) => request('GET', `/leagues/${inviteCode}`),
+  joinLeague: (inviteCode) => request('POST', `/leagues/${inviteCode}/join`),
+  confirmPayment: (leagueId, chargeId) =>
+    request('POST', '/leagues/confirm-payment', { league_id: leagueId, telegram_payment_charge_id: chargeId }),
+  getLeagueLeaderboard: (inviteCode) => request('GET', `/leagues/${inviteCode}/leaderboard`),
 }

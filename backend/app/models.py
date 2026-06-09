@@ -92,6 +92,45 @@ class UserListEntry(BaseModel):
     correct_predictions: int
 
 
+class CreateLeagueRequest(BaseModel):
+    name: str
+    entry_fee: int = 0  # in Telegram Stars
+
+
+class LeagueResponse(BaseModel):
+    id: int
+    name: str
+    creator_id: int
+    invite_code: str
+    entry_fee: int
+    competition_id: int
+    status: str
+    member_count: int
+    prize_pool: int
+    is_member: bool
+    is_creator: bool
+
+
+class LeagueMemberEntry(BaseModel):
+    user_id: int
+    username: str
+    photo_url: Optional[str] = None
+    total_points: int
+    correct_outcomes: int
+    correct_scores: int
+    rank: int
+
+
+class JoinLeagueResponse(BaseModel):
+    status: str  # 'joined' | 'invoice_sent'
+    invoice_url: Optional[str] = None
+
+
+class ConfirmPaymentRequest(BaseModel):
+    league_id: int
+    telegram_payment_charge_id: str
+
+
 class UserPredictionHistory(BaseModel):
     id: int
     match_id: int
