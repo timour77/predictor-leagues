@@ -5,6 +5,8 @@ from sqlalchemy import (
     Table, Text, func,
 )
 
+from sqlalchemy.dialects.postgresql import JSONB
+
 metadata = MetaData()
 
 users = Table(
@@ -106,4 +108,34 @@ predictions = Table(
     ),
     CheckConstraint("home_goals BETWEEN 0 AND 99 AND away_goals BETWEEN 0 AND 99", name="predictions_goals"),
     Index("predictions_match_idx", "league_id", "match_id"),
+)
+
+# Payments: Tips are voluntary Telegram Stars gifts; nothing is bought and no reward is funded (ADR 0002).
+tips = Table(
+    "tips",
+    metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("user_id", BigInteger, ForeignKey("users.id"), nullable=False),
+    Column("amount", Integer, nullable=False),
+    # Opaque id carried in the invoice; Telegram echoes it in pre_checkout_query / successful_payment.
+    Column("payload", Text, nullable=False, unique=True),
+    Column("status", Text, nullable=False, server_default="pending"),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint("amount > 0", name="tips_amount"),
+    CheckConstraint("status IN ('pending','paid')", name="tips_status"),
+)
+
+# Append-only journal of successful_payment updates; UNIQUE charge id makes redelivery a no-op.
+payment_events = Table(
+    "payment_events",
+    metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("telegram_payment_charge_id", Text, nullable=False, unique=True),
+    Column("provider_payment_charge_id", Text),
+    Column("tip_id", BigInteger, ForeignKey("tips.id")),
+    Column("telegram_user_id", BigInteger),
+    Column("amount", Integer, nullable=False),
+    Column("currency", Text, nullable=False),
+    Column("raw", JSONB, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
