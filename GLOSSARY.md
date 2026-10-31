@@ -37,3 +37,5 @@ _Avoid_: Entry Fee, Prize Pool, stake, bet — nobody pays to join a League, and
 **Settlement** — closing a League once every match in its Window is finished or dropped: final standings are fixed and the winner receives a Trophy. Ties on points are broken by number of exact scores; if still tied, all tied Members are winners and each receives a Trophy.
 
 **Cancellation** — a League that has fewer than two Members when its Window starts is cancelled and its Creator is notified.
+
+**Reminder** — a Telegram message nudging a Member who has no Prediction for a match whose Deadline is about an hour away. One Reminder per user per kickoff time, covering every match kicking off then and every League where the Member is still missing a Prediction. It is sent once, never made up if its hour was already missed (e.g. the Member joined later), and can be switched off globally in the user's profile.
