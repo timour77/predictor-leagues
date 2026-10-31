@@ -23,6 +23,7 @@ async function request(method, path, body) {
 
 export const api = {
   me: () => request('GET', '/me'),
+  setReminders: (enabled) => request('PUT', '/me/reminders', { enabled }),
   myTrophies: () => request('GET', '/me/trophies'),
 
   myLeagues: () => request('GET', '/leagues'),

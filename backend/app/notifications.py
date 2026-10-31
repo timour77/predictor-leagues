@@ -12,26 +12,45 @@ from app.schema import notifications, users
 MAX_ATTEMPTS = 5
 BATCH = 50
 
-Sender = Callable[[int, str], None]   # (telegram_id, body); raises on failure
+# (telegram_id, body) or (telegram_id, body, button=(text, url)); raises on failure
+Sender = Callable[..., None]
 
 
-def enqueue(conn: Connection, user_id: int, kind: str, body: str, dedupe_key: str) -> None:
-    conn.execute(
-        pg_insert(notifications).values(user_id=user_id, kind=kind, body=body, dedupe_key=dedupe_key)
-        .on_conflict_do_nothing(index_elements=["dedupe_key"])
-    )
+def enqueue(conn: Connection, user_id: int, kind: str, body: str, dedupe_key: str,
+            payload: dict | None = None, button: tuple[str, str] | None = None) -> bool:
+    """Returns False when the dedupe_key was already queued."""
+    return conn.execute(
+        pg_insert(notifications).values(
+            user_id=user_id, kind=kind, body=body, dedupe_key=dedupe_key, payload=payload,
+            button_text=button[0] if button else None, button_url=button[1] if button else None)
+        .on_conflict_do_nothing(index_elements=["dedupe_key"]).returning(notifications.c.id)
+    ).first() is not None
 
 
 def deliver_pending(conn: Connection, sender: Sender, now: datetime) -> dict:
     rows = conn.execute(text(
-        "SELECT n.id, n.body, u.telegram_id FROM notifications n JOIN users u ON u.id = n.user_id "
+        "SELECT n.id, n.user_id, n.kind, n.body, n.payload, n.button_text, n.button_url, u.telegram_id FROM notifications n JOIN users u ON u.id = n.user_id "
         "WHERE n.sent_at IS NULL AND n.attempts < :max ORDER BY n.id LIMIT :batch "
         "FOR UPDATE OF n SKIP LOCKED"
     ), {"max": MAX_ATTEMPTS, "batch": BATCH}).all()
     sent = failed = 0
     for row in rows:
+        body, button = row.body, (row.button_text, row.button_url) if row.button_url else None
+        if row.kind == "reminder":
+            from app import reminders   # imports this module, so only at call time
+            rendered = reminders.render_at_send(conn, row.user_id, row.payload, now)
+            if rendered is None:   # predicted, switched off or no longer upcoming: settle it quietly
+                conn.execute(
+                    notifications.update().where(notifications.c.id == row.id)
+                    .values(sent_at=now, last_error="skipped: nothing left to remind")
+                )
+                continue
+            body, button = rendered
         try:
-            sender(row.telegram_id, row.body)
+            if button:
+                sender(row.telegram_id, body, button=button)
+            else:
+                sender(row.telegram_id, body)
         except Exception as e:
             failed += 1
             conn.execute(

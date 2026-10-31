@@ -23,3 +23,6 @@ MATCHDATA_COMPETITION_IDS = [
 ]
 # Value Telegram echoes in `X-Telegram-Bot-Api-Secret-Token` (set via setWebhook secret_token).
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+# Mini App direct link used for Reminder buttons, e.g. https://t.me/<bot>/<app_short_name>.
+# Empty: Reminders are sent without a button.
+MINI_APP_LINK = os.getenv("MINI_APP_LINK", "")

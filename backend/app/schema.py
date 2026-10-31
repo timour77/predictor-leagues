@@ -1,8 +1,8 @@
 """Table definitions for query building. The schema itself is owned by Alembic
 migrations (backend/migrations); domain modules add their tables here."""
 from sqlalchemy import (
-    BigInteger, CheckConstraint, Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, MetaData,
-    Table, Text, func,
+    BigInteger, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, MetaData,
+    Table, Text, func, true,
 )
 
 from sqlalchemy.dialects.postgresql import JSONB
@@ -17,6 +17,8 @@ users = Table(
     Column("username", Text),
     Column("first_name", Text),
     Column("photo_url", Text),
+    # Global switch for pre-kickoff Reminders (default on).
+    Column("reminders_enabled", Boolean, nullable=False, server_default=true()),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
 
@@ -177,4 +179,9 @@ notifications = Table(
     Column("sent_at", DateTime(timezone=True)),
     Column("attempts", Integer, nullable=False, server_default="0"),
     Column("last_error", Text),
+    # Optional extras: `payload` lets a kind rebuild its message at send time (Reminders);
+    # the button is an inline URL button under the message.
+    Column("payload", JSONB),
+    Column("button_text", Text),
+    Column("button_url", Text),
 )

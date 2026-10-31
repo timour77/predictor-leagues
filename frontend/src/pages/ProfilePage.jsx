@@ -9,6 +9,11 @@ export function ProfilePage({ me, nav }) {
   const [tip, setTip] = useState(false)
   const [trophies, setTrophies] = useState(null)
   useEffect(() => { api.myTrophies().then(d => setTrophies(d.trophies)).catch(() => {}) }, [])
+  const [reminders, setReminders] = useState(me.reminders_enabled !== false)
+  const toggleReminders = (enabled) => {
+    setReminders(enabled)
+    api.setReminders(enabled).catch(() => setReminders(!enabled))
+  }
   const m = { ...me, user_id: me.id }
   return (
     <Page title="Profile" onBack={nav.back}>
@@ -28,6 +33,13 @@ export function ProfilePage({ me, nav }) {
           ))}
         </div>
       )}
+      <div className="card">
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input type="checkbox" checked={reminders} onChange={e => toggleReminders(e.target.checked)} />
+          <b>Match reminders</b>
+        </label>
+        <div className="muted sm">A Telegram message an hour before kickoff when you haven't predicted yet.</div>
+      </div>
       <div className="card">
         <b>Support the developer</b>
         <div className="muted sm">Tips in ⭐ Stars. Nothing in return that affects play.</div>

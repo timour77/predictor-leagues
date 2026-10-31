@@ -10,7 +10,10 @@ import { ProfilePage } from './pages/ProfilePage'
 
 function initialRoute() {
   const p = startParam()
-  return p.startsWith('join_') ? { name: 'join', code: p.slice(5) } : { name: 'home' }
+  if (p.startsWith('join_')) return { name: 'join', code: p.slice(5) }
+  // Reminder deep link: straight to the League; no param (or a bad one) lands on the Leagues list.
+  const league = /^league_(\d+)$/.exec(p)
+  return league ? { name: 'league', id: Number(league[1]) } : { name: 'home' }
 }
 
 export default function App() {
