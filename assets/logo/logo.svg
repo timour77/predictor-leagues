@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="0.55" stop-color="#1e3a8a"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="0.5" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.5">
+      <stop offset="0" stop-color="#60a5fa" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="ball"><circle r="56"/></clipPath>
+  </defs>
+
+  <!-- Square background (Telegram crops avatars to a circle; the mark stays inside it) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="230" r="220" fill="url(#glow)"/>
+
+  <!-- Trophy -->
+  <g fill="none" stroke="url(#gold)" stroke-width="20" stroke-linecap="round">
+    <path d="M160 150 H128 C118 150 112 157 112 167 C112 211 138 240 178 246"/>
+    <path d="M352 150 H384 C394 150 400 157 400 167 C400 211 374 240 334 246"/>
+  </g>
+  <path fill="url(#gold)" d="M150 116 H362 V178 C362 258 314 310 256 310 C198 310 150 258 150 178 Z"/>
+  <rect x="236" y="304" width="40" height="50" fill="url(#gold)"/>
+  <rect x="190" y="350" width="132" height="34" rx="10" fill="url(#gold)"/>
+  <rect x="166" y="382" width="180" height="26" rx="9" fill="#d97706"/>
+
+  <!-- Football on the cup: centre pentagon, five rim pentagons, hexagon seams -->
+  <g transform="translate(256 202)">
+    <circle r="56" fill="#f8fafc"/>
+    <g clip-path="url(#ball)">
+      <g fill="#0f172a">
+        <polygon points="0.0,-18.0 17.1,-5.6 10.6,14.6 -10.6,14.6 -17.1,-5.6"/>
+        <polygon points="0.0,-37.0 -17.1,-49.4 -10.6,-69.6 10.6,-69.6 17.1,-49.4"/>
+        <polygon points="35.2,-11.4 41.7,-31.6 62.9,-31.6 69.4,-11.4 52.3,1.0"/>
+        <polygon points="21.7,29.9 42.9,29.9 49.4,50.1 32.3,62.5 15.2,50.1"/>
+        <polygon points="-21.7,29.9 -15.2,50.1 -32.3,62.5 -49.4,50.1 -42.9,29.9"/>
+        <polygon points="-35.2,-11.4 -52.3,1.0 -69.4,-11.4 -62.9,-31.6 -41.7,-31.6"/>
+      </g>
+      <g stroke="#0f172a" stroke-width="4" stroke-linecap="round">
+        <line x1="0.0" y1="-18.0" x2="0.0" y2="-37.0"/>
+        <line x1="17.1" y1="-5.6" x2="35.2" y2="-11.4"/>
+        <line x1="10.6" y1="14.6" x2="21.7" y2="29.9"/>
+        <line x1="-10.6" y1="14.6" x2="-21.7" y2="29.9"/>
+        <line x1="-17.1" y1="-5.6" x2="-35.2" y2="-11.4"/>
+        <line x1="17.1" y1="-49.4" x2="41.7" y2="-31.6"/>
+        <line x1="52.3" y1="1.0" x2="42.9" y2="29.9"/>
+        <line x1="15.2" y1="50.1" x2="-15.2" y2="50.1"/>
+        <line x1="-42.9" y1="29.9" x2="-52.3" y2="1.0"/>
+        <line x1="-41.7" y1="-31.6" x2="-17.1" y2="-49.4"/>
+      </g>
+    </g>
+    <circle r="54.5" fill="none" stroke="#0f172a" stroke-opacity="0.25" stroke-width="3"/>
+  </g>
+</svg>
