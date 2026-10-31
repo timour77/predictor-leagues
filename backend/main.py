@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import me
+from app.routers import cron, matches, me
 
 app = FastAPI(title="Predictor Leagues API", version="2.0.0")
 
@@ -16,6 +16,8 @@ app.add_middleware(
 
 # Domain routers (Leagues, Predictions, Payments, cron tick) are added by #12-#15.
 app.include_router(me.router, prefix="/api", tags=["me"])
+app.include_router(matches.router, prefix="/api", tags=["matches"])
+app.include_router(cron.router, prefix="/api", tags=["cron"])
 
 
 @app.get("/api/health")
