@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Domain routers (Payments, Settlement) are added by #14-#15.
+# Domain routers (Payments) are added by #14.
 app.include_router(me.router, prefix="/api", tags=["me"])
 app.include_router(matches.router, prefix="/api", tags=["matches"])
 app.include_router(leagues.router, prefix="/api", tags=["leagues"])

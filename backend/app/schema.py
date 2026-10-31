@@ -52,7 +52,7 @@ competition_sync = Table(
 )
 
 # Leagues: private, always free. `status` moves open -> active -> settling -> settled, or
-# open -> cancelled; transitions are guarded in app/leagues.py (tick steps arrive with #15).
+# open -> cancelled; transitions are guarded in app/leagues.py and driven by app/settlement.py.
 leagues = Table(
     "leagues",
     metadata,
@@ -65,6 +65,8 @@ leagues = Table(
     Column("window_end", Date, nullable=False),
     Column("status", Text, nullable=False, server_default="open"),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("settled_at", DateTime(timezone=True)),
+    Column("matches_scored", Integer),   # set at Settlement
     CheckConstraint("window_end >= window_start", name="leagues_window_order"),
     CheckConstraint(
         "status IN ('open','active','settling','settled','cancelled')", name="leagues_status"
@@ -106,4 +108,41 @@ predictions = Table(
     ),
     CheckConstraint("home_goals BETWEEN 0 AND 99 AND away_goals BETWEEN 0 AND 99", name="predictions_goals"),
     Index("predictions_match_idx", "league_id", "match_id"),
+)
+
+# Settlement (#15). `final_standings` fixes the result when a League settles, so later data
+# corrections in MatchData cannot change it; `trophies` is the permanent profile mark.
+final_standings = Table(
+    "final_standings",
+    metadata,
+    Column("league_id", BigInteger, ForeignKey("leagues.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", BigInteger, ForeignKey("users.id"), primary_key=True),
+    Column("rank", Integer, nullable=False),
+    Column("points", Integer, nullable=False),
+    Column("exact", Integer, nullable=False),
+)
+
+trophies = Table(
+    "trophies",
+    metadata,
+    Column("league_id", BigInteger, ForeignKey("leagues.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", BigInteger, ForeignKey("users.id"), primary_key=True),
+    Column("awarded_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Index("trophies_user_idx", "user_id"),
+)
+
+# Outbox for Telegram bot messages: written inside domain transactions, delivered by the tick.
+notifications = Table(
+    "notifications",
+    metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("user_id", BigInteger, ForeignKey("users.id"), nullable=False),
+    Column("kind", Text, nullable=False),
+    Column("body", Text, nullable=False),
+    # Makes enqueueing idempotent, e.g. "league_cancelled:42".
+    Column("dedupe_key", Text, nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("sent_at", DateTime(timezone=True)),
+    Column("attempts", Integer, nullable=False, server_default="0"),
+    Column("last_error", Text),
 )
