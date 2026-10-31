@@ -1,73 +1,43 @@
-const BASE = import.meta.env.VITE_API_URL || '/api'
+import { getInitData } from './telegram'
 
-function getHeaders() {
-  const token = localStorage.getItem('token')
-  const headers = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
+const BASE = import.meta.env.VITE_API_URL || '/api'
 
 async function request(method, path, body) {
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: getHeaders(),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `tma ${getInitData()}`,
+    },
     body: body ? JSON.stringify(body) : undefined,
   })
+  if (res.status === 204) return null
+  const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || 'Request failed')
+    const err = new Error(typeof data.detail === 'string' ? data.detail : 'Request failed')
+    err.status = res.status
+    throw err
   }
-  return res.json()
+  return data
 }
 
 export const api = {
-  // Auth
-  login: (username, password) => request('POST', '/auth/login', { username, password }),
-  register: (username, password) => request('POST', '/auth/register', { username, password }),
-  telegramAuth: (initData) => request('POST', '/auth/telegram', { initData }),
-  getMyStats: () => request('GET', '/auth/me/stats'),
+  me: () => request('GET', '/me'),
 
-  // Matches
-  getMatches: (competitionId, date, status) => {
-    const params = new URLSearchParams({ competition_id: competitionId })
-    if (date) params.set('date', date)
-    if (status) params.set('status', status)
-    return request('GET', `/matches?${params}`)
-  },
-  // Predictions
-  savePrediction: (matchId, competitionId, outcome, predictedScore) =>
-    request('POST', '/predictions', { match_id: matchId, competition_id: competitionId, outcome, predicted_score: predictedScore }),
-  updatePrediction: (id, matchId, competitionId, outcome, predictedScore) =>
-    request('PUT', `/predictions/${id}`, { match_id: matchId, competition_id: competitionId, outcome, predicted_score: predictedScore }),
-  deletePrediction: (id) => request('DELETE', `/predictions/${id}`),
-  getMyPredictions: (competitionId) => {
-    const params = competitionId ? `?competition_id=${competitionId}` : ''
-    return request('GET', `/predictions${params}`)
-  },
+  myLeagues: () => request('GET', '/leagues'),
+  createLeague: (body) => request('POST', '/leagues', body),
+  league: (id) => request('GET', `/leagues/${id}`),
+  invitePreview: (code) => request('GET', `/leagues/invite/${code}`),
+  join: (code) => request('POST', `/leagues/invite/${code}/join`),
 
-  getMatchPredictions: (matchId) => request('GET', `/predictions/match/${matchId}`),
+  leagueMatches: (id) => request('GET', `/leagues/${id}/matches`),
+  standings: (id) => request('GET', `/leagues/${id}/standings`),
+  matchPredictions: (id, matchId) => request('GET', `/leagues/${id}/matches/${matchId}/predictions`),
+  savePrediction: (id, matchId, home, away) =>
+    request('PUT', `/leagues/${id}/matches/${matchId}/prediction`, { home_goals: home, away_goals: away }),
+  withdrawPrediction: (id, matchId) => request('DELETE', `/leagues/${id}/matches/${matchId}/prediction`),
 
-  // Users
-  getUsers: () => request('GET', '/users'),
-  getUserStats: (userId) => request('GET', `/users/${userId}/stats`),
-  getUserPredictions: (userId) => request('GET', `/users/${userId}/predictions`),
-
-  // Leaderboard
-  getLeaderboard: (competitionId) => {
-    const params = competitionId ? `?competition_id=${competitionId}` : ''
-    return request('GET', `/leaderboard${params}`)
-  },
-  getMyPosition: (competitionId) => {
-    const params = competitionId ? `?competition_id=${competitionId}` : ''
-    return request('GET', `/leaderboard/me${params}`)
-  },
-
-  // Leagues
-  createLeague: (name, entryFee) => request('POST', '/leagues', { name, entry_fee: entryFee }),
-  getMyLeagues: () => request('GET', '/leagues/my'),
-  getLeague: (inviteCode) => request('GET', `/leagues/${inviteCode}`),
-  joinLeague: (inviteCode) => request('POST', `/leagues/${inviteCode}/join`),
-  confirmPayment: (leagueId, chargeId) =>
-    request('POST', '/leagues/confirm-payment', { league_id: leagueId, telegram_payment_charge_id: chargeId }),
-  getLeagueLeaderboard: (inviteCode) => request('GET', `/leagues/${inviteCode}/leaderboard`),
+  // Tips (Telegram Stars, Payments module #14): returns { invoice_url }. 404/405 means the
+  // endpoint is not deployed, so callers hide or soften the Tip UI.
+  createTipInvoice: (amount) => request('POST', '/tips', { amount }),
 }

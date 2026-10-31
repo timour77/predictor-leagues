@@ -1,76 +1,38 @@
-import { useState, useEffect, useCallback } from 'react'
-import { MatchCard } from '../components/MatchCard'
+import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import { Page, Loading, ErrorMsg } from '../components/Page'
+import { competitionName, dateOnly, statusBadge } from '../utils/format'
 
-const WORLD_CUP_ID = 2000
+export function HomePage({ me, nav }) {
+  const [leagues, setLeagues] = useState(null)
+  const [error, setError] = useState('')
 
-function todayStr() {
-  return new Date().toISOString().split('T')[0]
-}
-
-export function HomePage({ user }) {
-  const [date, setDate] = useState(todayStr)
-  const [matches, setMatches] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-
-  const loadMatches = useCallback(() => {
-    setLoading(true)
-    setError(null)
-    api.getMatches(WORLD_CUP_ID, date)
-      .then(setMatches)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [date])
-
-  useEffect(() => { loadMatches() }, [loadMatches])
-
-  function shiftDate(days) {
-    const d = new Date(date)
-    d.setDate(d.getDate() + days)
-    setDate(d.toISOString().split('T')[0])
-  }
+  useEffect(() => {
+    api.myLeagues().then(r => setLeagues(r.leagues)).catch(e => setError(e.message))
+  }, [])
 
   return (
-    <div className="page">
-      <div className="competition-selector">
-        <div className="date-row">
-          <button className="btn btn-ghost btn-sm" onClick={() => shiftDate(-1)}>◀</button>
-          <input
-            className="input"
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-          />
-          <button className="btn btn-ghost btn-sm" onClick={() => shiftDate(1)}>▶</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setDate(todayStr())}>Today</button>
-        </div>
+    <Page title="Predictor Leagues" right={
+      <button className="btn btn-ghost btn-sm" onClick={() => nav.push({ name: 'profile' })}>👤</button>}>
+      <div className="row" style={{ marginBottom: 10 }}>
+        <b className="grow">My Leagues</b>
+        <button className="btn btn-primary btn-sm" onClick={() => nav.push({ name: 'create' })}>+ New League</button>
       </div>
-
-      {loading && (
-        <div className="loader">
-          <div className="spinner" />
-          Loading matches...
-        </div>
+      <ErrorMsg error={error} />
+      {!leagues && !error && <Loading />}
+      {leagues?.length === 0 && (
+        <div className="empty">No Leagues yet. Create one and invite your friends, or open an invite link.</div>
       )}
-
-      {error && <div className="error-msg" style={{ marginBottom: 12 }}>{error}</div>}
-
-      {!loading && !error && matches.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-state-icon">📅</div>
-          <div className="empty-state-text">No matches on this date</div>
-        </div>
-      )}
-
-      {!loading && matches.map(match => (
-        <MatchCard
-          key={match.external_id}
-          match={match}
-          currentUserId={user?.id}
-          onPredictionSaved={loadMatches}
-        />
-      ))}
-    </div>
+      {leagues?.map(l => {
+        const badge = statusBadge(l)
+        return (
+          <div key={l.id} className="card clickable" onClick={() => nav.push({ name: 'league', id: l.id })}>
+            <div className="row"><b className="grow">{l.name}</b><span className={`badge ${badge.tone}`}>{badge.label}</span></div>
+            <div className="muted sm">{l.competition_ids.map(competitionName).join(', ')}</div>
+            <div className="muted sm">{dateOnly(l.window_start)} → {dateOnly(l.window_end)}{l.creator_id === me.id ? ' · you are Creator' : ''}</div>
+          </div>
+        )
+      })}
+    </Page>
   )
 }

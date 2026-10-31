@@ -1,82 +1,50 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from './hooks/useAuth'
-import { LoginPage } from './pages/LoginPage'
+import { useEffect, useState, useCallback } from 'react'
+import { api } from './services/api'
+import { getInitData, initTelegram, startParam, showBackButton } from './services/telegram'
 import { HomePage } from './pages/HomePage'
-import { LeaderboardPage } from './pages/LeaderboardPage'
+import { CreateLeaguePage } from './pages/CreateLeaguePage'
+import { InvitePage } from './pages/InvitePage'
+import { JoinPage } from './pages/JoinPage'
+import { LeaguePage } from './pages/LeaguePage'
 import { ProfilePage } from './pages/ProfilePage'
-import { ParticipantsPage } from './pages/ParticipantsPage'
-import { LeaguesPage } from './pages/LeaguesPage'
 
-const TABS = [
-  { id: 'matches', label: 'Матчи', icon: '⚽' },
-  { id: 'leagues', label: 'Лиги', icon: '🏅' },
-  { id: 'leaderboard', label: 'Лидеры', icon: '🏆' },
-  { id: 'participants', label: 'Игроки', icon: '👥' },
-  { id: 'profile', label: 'Профиль', icon: '👤' },
-]
+function initialRoute() {
+  const p = startParam()
+  return p.startsWith('join_') ? { name: 'join', code: p.slice(5) } : { name: 'home' }
+}
 
 export default function App() {
-  const { user, login, register, telegramLogin, logout } = useAuth()
-  const [tab, setTab] = useState('matches')
-  const [tgLoading, setTgLoading] = useState(() => !!window.Telegram?.WebApp?.initData)
+  const [me, setMe] = useState(null)
+  const [error, setError] = useState('')
+  const [stack, setStack] = useState([initialRoute()])
+  const route = stack[stack.length - 1]
+
+  const push = useCallback((r) => setStack(s => [...s, r]), [])
+  const back = useCallback(() => setStack(s => (s.length > 1 ? s.slice(0, -1) : [{ name: 'home' }])), [])
+  const replace = useCallback((r) => setStack(s => [...s.slice(0, -1), r]), [])
+  const home = useCallback(() => setStack([{ name: 'home' }]), [])
 
   useEffect(() => {
-    const tg = window.Telegram?.WebApp
-    if (!tg?.initData) return
-    tg.ready()
-    tg.expand()
-    telegramLogin(tg.initData).finally(() => setTgLoading(false))
+    initTelegram()
+    if (!getInitData()) { setError('Open this app from Telegram.'); return }
+    api.me().then(setMe).catch(e => setError(e.message))
   }, [])
 
-  async function handleAuth(mode, username, password) {
-    if (mode === 'login') return login(username, password)
-    return register(username, password)
-  }
+  useEffect(() => showBackButton(stack.length > 1 ? back : null), [stack.length, back])
 
-  function handleLogout() {
-    logout()
-    setTab('matches')
-  }
+  if (error) return <div className="center-screen"><div style={{ fontSize: 32 }}>⚽</div><p>{error}</p></div>
+  if (!me) return <div className="center-screen"><div className="spinner" /></div>
 
-  if (tgLoading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 12 }}>
-        <div style={{ fontSize: 32 }}>⚽</div>
-        <div style={{ color: 'var(--text-secondary)' }}>Загрузка...</div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return <LoginPage onAuth={handleAuth} />
-  }
-
+  const nav = { push, back, replace, home }
   return (
-    <>
-      <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {tab === 'matches' && <HomePage user={user} />}
-        {tab === 'leagues' && <LeaguesPage user={user} />}
-        {tab === 'leaderboard' && <LeaderboardPage user={user} />}
-        {tab === 'participants' && <ParticipantsPage user={user} />}
-        {tab === 'profile' && <ProfilePage user={user} onLogout={handleLogout} />}
-      </main>
-
-      <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)', padding: '2px 0' }}>
-        Football data provided by the Football-Data.org API
-      </div>
-
-      <nav className="nav-tabs">
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            className={`nav-tab ${tab === t.id ? 'active' : ''}`}
-            onClick={() => setTab(t.id)}
-          >
-            <span className="nav-tab-icon">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-    </>
+    <main className="app">
+      {route.name === 'home' && <HomePage me={me} nav={nav} />}
+      {route.name === 'create' && <CreateLeaguePage nav={nav} />}
+      {route.name === 'invite' && <InvitePage leagueId={route.id} nav={nav} />}
+      {route.name === 'join' && <JoinPage code={route.code} nav={nav} />}
+      {route.name === 'league' && <LeaguePage key={route.id} leagueId={route.id} me={me} nav={nav} />}
+      {route.name === 'profile' && <ProfilePage me={me} nav={nav} />}
+      <div className="attribution">Football data provided by the Football-Data.org API</div>
+    </main>
   )
 }
