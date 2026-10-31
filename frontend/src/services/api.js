@@ -37,7 +37,7 @@ export const api = {
     request('PUT', `/leagues/${id}/matches/${matchId}/prediction`, { home_goals: home, away_goals: away }),
   withdrawPrediction: (id, matchId) => request('DELETE', `/leagues/${id}/matches/${matchId}/prediction`),
 
-  // Tips (Telegram Stars) arrive with the Payments module (#14). The route is the one described
-  // in that ticket's plan; callers must treat 404/405 as "not available" and hide the Tip UI.
-  createTipInvoice: (stars) => request('POST', '/tips/invoice', { stars }),
+  // Tips (Telegram Stars, Payments module #14): returns { invoice_url }. 404/405 means the
+  // endpoint is not deployed, so callers hide or soften the Tip UI.
+  createTipInvoice: (amount) => request('POST', '/tips', { amount }),
 }
