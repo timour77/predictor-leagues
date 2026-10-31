@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.errors import DomainError
-from app.routers import cron, leagues, matches, me
+from app.routers import cron, leagues, matches, me, payments
 
 app = FastAPI(title="Predictor Leagues API", version="2.0.0")
 
@@ -16,11 +16,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Domain routers (Payments) are added by #14.
+# Domain routers.
 app.include_router(me.router, prefix="/api", tags=["me"])
 app.include_router(matches.router, prefix="/api", tags=["matches"])
 app.include_router(leagues.router, prefix="/api", tags=["leagues"])
 app.include_router(cron.router, prefix="/api", tags=["cron"])
+app.include_router(payments.router, prefix="/api", tags=["payments"])
 
 
 @app.exception_handler(DomainError)

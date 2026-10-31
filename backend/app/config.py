@@ -21,3 +21,5 @@ MATCHDATA_COMPETITION_IDS = [
         "2000,2001,2002,2003,2013,2014,2015,2016,2017,2018,2019,2021",
     ).split(",") if x.strip()
 ]
+# Value Telegram echoes in `X-Telegram-Bot-Api-Secret-Token` (set via setWebhook secret_token).
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
