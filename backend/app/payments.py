@@ -10,6 +10,7 @@ import requests
 from sqlalchemy import Connection, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from app import config
 from app.errors import Invalid
 from app.schema import payment_events, tips, users
 
@@ -22,9 +23,23 @@ class TelegramBot:
     def __init__(self, token: str):
         self.token = token
 
+    def method_url(self, method: str) -> str:
+        test = "/test" if config.TELEGRAM_TEST_ENV else ""
+        return f"https://api.telegram.org/bot{self.token}{test}/{method}"
+
+    def refund_star_payment(self, user_id: int, charge_id: str) -> None:
+        r = requests.post(
+            self.method_url("refundStarPayment"),
+            json={"user_id": user_id, "telegram_payment_charge_id": charge_id},
+            timeout=10,
+        )
+        data = r.json()
+        if not data.get("ok"):
+            raise RuntimeError(f"refundStarPayment failed: {data.get('description')}")
+
     def create_invoice_link(self, *, title: str, description: str, payload: str, amount: int) -> str:
         r = requests.post(
-            f"https://api.telegram.org/bot{self.token}/createInvoiceLink",
+            self.method_url("createInvoiceLink"),
             json={
                 "title": title,
                 "description": description,

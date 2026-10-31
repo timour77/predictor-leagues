@@ -1,7 +1,7 @@
 """Outgoing Telegram bot messages. Only the notifications outbox calls this."""
 import requests
 
-from app import config
+from app import config, payments
 
 
 def send_message(telegram_id: int, body: str, button: tuple[str, str] | None = None) -> None:
@@ -11,7 +11,7 @@ def send_message(telegram_id: int, body: str, button: tuple[str, str] | None = N
     if button:
         payload["reply_markup"] = {"inline_keyboard": [[{"text": button[0], "url": button[1]}]]}
     resp = requests.post(
-        f"https://api.telegram.org/bot{config.BOT_TOKEN}/sendMessage",
+        payments.TelegramBot(config.BOT_TOKEN).method_url("sendMessage"),
         json=payload,
         timeout=10,
     )

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../services/api'
-import { openInvoice } from '../services/telegram'
+import { openInvoice, openLegal } from '../services/telegram'
 
 // Tips are offered only from the profile and the Settlement banner (ADR 0002), never during
 // join or predict. If the Payments endpoint is not deployed the sheet reports it politely.
@@ -27,6 +27,12 @@ export function TipSheet({ onClose }) {
       <div className="sheet" onClick={e => e.stopPropagation()}>
         <b>Leave a tip ⭐</b>
         <p className="muted sm">Voluntary. It doesn't change points, standings or anything in a League.</p>
+        <p className="muted sm">
+          By tipping you confirm you have read and agree to the{' '}
+          <a href="/terms" onClick={e => { e.preventDefault(); openLegal('terms') }}>Terms</a>.{' '}
+          See also the <a href="/privacy" onClick={e => { e.preventDefault(); openLegal('privacy') }}>Privacy policy</a>.
+          Need a refund? Send /paysupport to the bot.
+        </p>
         <div className="row gap" style={{ margin: '12px 0' }}>
           {[10, 50, 100].map(n => (
             <button key={n} className="btn btn-ghost grow" disabled={busy} onClick={() => tip(n)}>{n} ⭐</button>

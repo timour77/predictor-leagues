@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import Connection
 
-from app import config, payments
+from app import bot_commands, config, payments
 from app.auth import get_current_user
 from app.db import get_conn
 
@@ -48,4 +48,5 @@ async def webhook(request: Request, conn: Connection = Depends(get_conn)):
     message = update.get("message") or {}
     if "successful_payment" in message:
         payments.record_payment(conn, message)
-    return {"ok": True}
+        return {"ok": True}
+    return bot_commands.reply(message) or {"ok": True}
