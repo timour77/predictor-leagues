@@ -1,7 +1,7 @@
 import requests
 import time
 from typing import List, Dict, Optional
-from app.utils.config import FOOTBALL_DATA_API_KEY
+from app.config import FOOTBALL_DATA_API_KEY
 
 BASE_URL = "https://api.football-data.org/v4"
 HEADERS = {"X-Auth-Token": FOOTBALL_DATA_API_KEY}
