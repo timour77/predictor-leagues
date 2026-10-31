@@ -28,7 +28,7 @@ API доступен на http://localhost:8000
 TEST_DATABASE_URL=postgresql://postgres:pw@localhost:5432/pl venv/bin/pytest
 ```
 
-Миграции на проде выполняет job `migrate` в `.github/workflows/backend.yml` (секрет `DATABASE_URL_DIRECT`). Операторские действия — скрипты в `backend/scripts/`, HTTP admin нет.
+Миграции на проде выполняет job `migrate` в `.github/workflows/backend.yml` (секрет `DATABASE_URL_DIRECT`). Операторские действия — скрипты в `backend/scripts/`, HTTP admin нет. Пересчёт итогов завершённой лиги после исправления результата: `python -m scripts.resettle_league <id> [--dry-run] [--notify]` (см. `backend/scripts/README.md`).
 
 ### Frontend
 
