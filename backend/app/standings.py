@@ -1,13 +1,14 @@
 """Standings: computed by query from Predictions and match results, never stored by a GET.
 
-Settlement (#15) fixes the final standings by reusing `compute_standings` at that time.
+Settlement (app/settlement.py) fixes the final standings by reusing `compute_standings` at that time;
+once a League is settled, `standings_for` serves the stored result.
 """
 from datetime import datetime
 
 from sqlalchemy import Connection, select
 
 from app import leagues as leagues_mod, scoring
-from app.schema import matches, predictions
+from app.schema import final_standings, matches, predictions, users
 
 
 def compute_standings(conn: Connection, league: dict, now: datetime) -> dict:
@@ -44,3 +45,21 @@ def compute_standings(conn: Connection, league: dict, now: datetime) -> dict:
         "matches_scored": len(results),
         "matches_pending": pending,
     }
+
+
+def settled_standings(conn: Connection, league: dict) -> dict:
+    rows = conn.execute(
+        select(final_standings.c.user_id, users.c.username, users.c.first_name, users.c.photo_url,
+               final_standings.c.points, final_standings.c.exact, final_standings.c.rank)
+        .join(users, users.c.id == final_standings.c.user_id)
+        .where(final_standings.c.league_id == league["id"])
+        .order_by(final_standings.c.rank, final_standings.c.user_id)
+    ).mappings()
+    return {"standings": [dict(r) for r in rows], "matches_scored": league["matches_scored"], "matches_pending": 0}
+
+
+def standings_for(conn: Connection, league: dict, now: datetime) -> dict:
+    """Live standings, or the fixed final result once the League is settled."""
+    if league["status"] == "settled":
+        return {**settled_standings(conn, league), "final": True}
+    return {**compute_standings(conn, league, now), "final": False}

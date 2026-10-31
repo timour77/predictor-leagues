@@ -1,7 +1,7 @@
 """Leagues: create, join, and the status machine.
 
 Leagues are always free (ADR 0002). Joining closes when the first match of the Window kicks
-off. The tick steps that start, cancel and settle Leagues belong to #15; they use `transition`.
+off. The tick steps that start, cancel and settle Leagues live in app/settlement.py and use `transition`.
 """
 import secrets
 from datetime import date, datetime, time, timedelta, timezone
@@ -9,7 +9,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from sqlalchemy import Connection, func, insert, select, update
 
 from app.errors import Conflict, Invalid, NotFound
-from app.schema import league_competitions, league_members, leagues, matches, users
+from app.schema import league_competitions, league_members, leagues, matches, trophies, users
 
 GRACE_PERIOD = timedelta(days=7)
 MAX_WINDOW_DAYS = 400
@@ -171,6 +171,11 @@ def list_for_user(conn: Connection, user_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def winner_ids(conn: Connection, league_id: int) -> list[int]:
+    """Users who won the League's Trophy; empty until it is settled."""
+    return sorted(conn.execute(select(trophies.c.user_id).where(trophies.c.league_id == league_id)).scalars())
+
+
 def league_view(conn: Connection, league: dict) -> dict:
     return {
         "id": league["id"],
@@ -182,4 +187,5 @@ def league_view(conn: Connection, league: dict) -> dict:
         "status": league["status"],
         "competition_ids": competition_ids(conn, league["id"]),
         "join_closes_at": join_closes_at(conn, league),
+        "winner_ids": winner_ids(conn, league["id"]),
     }

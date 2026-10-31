@@ -83,7 +83,7 @@ def league_standings(
     now: datetime = Depends(get_now),
 ):
     league = leagues.get_league_for_member(conn, league_id, user["id"])
-    return standings.compute_standings(conn, league, now)
+    return standings.standings_for(conn, league, now)
 
 
 @router.get("/leagues/{league_id}/matches")

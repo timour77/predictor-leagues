@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Domain routers; Settlement arrives with #15.
+# Domain routers.
 app.include_router(me.router, prefix="/api", tags=["me"])
 app.include_router(matches.router, prefix="/api", tags=["matches"])
 app.include_router(leagues.router, prefix="/api", tags=["leagues"])
