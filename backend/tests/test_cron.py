@@ -16,7 +16,7 @@ def tick_client(client, migrated_db, monkeypatch):
 
     monkeypatch.setattr(config, "CRON_SECRET", SECRET)
     with get_engine().begin() as c:
-        c.execute(text("TRUNCATE matches, competition_sync RESTART IDENTITY"))
+        c.execute(text("TRUNCATE matches, competition_sync RESTART IDENTITY CASCADE"))
     fake = FakeClient({2021: [match(1)]})
     monkeypatch.setattr(config, "MATCHDATA_COMPETITION_IDS", [2021])
     app.dependency_overrides[cron_router.get_football_client] = lambda: fake

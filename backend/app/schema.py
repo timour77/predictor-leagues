@@ -1,6 +1,9 @@
 """Table definitions for query building. The schema itself is owned by Alembic
 migrations (backend/migrations); domain modules add their tables here."""
-from sqlalchemy import BigInteger, Column, DateTime, Index, Integer, MetaData, Table, Text, func
+from sqlalchemy import (
+    BigInteger, CheckConstraint, Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, MetaData,
+    Table, Text, func,
+)
 
 metadata = MetaData()
 
@@ -46,4 +49,61 @@ competition_sync = Table(
     Column("last_attempt_at", DateTime(timezone=True), nullable=False),
     Column("last_synced_at", DateTime(timezone=True)),
     Column("last_error", Text),
+)
+
+# Leagues: private, always free. `status` moves open -> active -> settling -> settled, or
+# open -> cancelled; transitions are guarded in app/leagues.py (tick steps arrive with #15).
+leagues = Table(
+    "leagues",
+    metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("name", Text, nullable=False),
+    Column("creator_id", BigInteger, ForeignKey("users.id"), nullable=False),
+    Column("invite_code", Text, nullable=False, unique=True),
+    # The Window: inclusive UTC calendar dates.
+    Column("window_start", Date, nullable=False),
+    Column("window_end", Date, nullable=False),
+    Column("status", Text, nullable=False, server_default="open"),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint("window_end >= window_start", name="leagues_window_order"),
+    CheckConstraint(
+        "status IN ('open','active','settling','settled','cancelled')", name="leagues_status"
+    ),
+)
+
+league_competitions = Table(
+    "league_competitions",
+    metadata,
+    Column("league_id", BigInteger, ForeignKey("leagues.id", ondelete="CASCADE"), primary_key=True),
+    Column("competition_id", Integer, primary_key=True),
+)
+
+league_members = Table(
+    "league_members",
+    metadata,
+    Column("league_id", BigInteger, ForeignKey("leagues.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", BigInteger, ForeignKey("users.id"), primary_key=True),
+    Column("joined_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Index("league_members_user_idx", "user_id"),
+)
+
+# One Prediction per Member, League and match: a single exact score (the outcome is derived).
+# Withdrawing deletes the row. Rows are only written before the match's Deadline (its kickoff).
+predictions = Table(
+    "predictions",
+    metadata,
+    Column("league_id", BigInteger, primary_key=True),
+    Column("user_id", BigInteger, primary_key=True),
+    Column("match_id", BigInteger, ForeignKey("matches.id"), primary_key=True),
+    Column("home_goals", Integer, nullable=False),
+    Column("away_goals", Integer, nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    # Only Members may predict, enforced by the database.
+    ForeignKeyConstraint(
+        ["league_id", "user_id"],
+        ["league_members.league_id", "league_members.user_id"],
+        ondelete="CASCADE",
+    ),
+    CheckConstraint("home_goals BETWEEN 0 AND 99 AND away_goals BETWEEN 0 AND 99", name="predictions_goals"),
+    Index("predictions_match_idx", "league_id", "match_id"),
 )

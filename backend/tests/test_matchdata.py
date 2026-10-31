@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import insert, select, text
 
 from app import matchdata
 from app.db import get_engine
@@ -36,7 +36,7 @@ class FakeClient:
 @pytest.fixture
 def conn(migrated_db):
     with get_engine().begin() as c:
-        c.execute(text("TRUNCATE matches, competition_sync RESTART IDENTITY"))
+        c.execute(text("TRUNCATE matches, competition_sync, leagues, users RESTART IDENTITY CASCADE"))
     with get_engine().begin() as c:
         yield c
 
@@ -154,8 +154,21 @@ def test_competitions_with_matches_near_kickoff_are_prioritised(conn):
     assert 105 in out["synced"][:1]
 
 
-def test_no_active_leagues_yet_means_no_priority(conn):
+def test_no_leagues_means_no_priority(conn):
     assert matchdata.priority_competition_ids(conn, NOW) == []
+
+
+def test_priority_is_the_competitions_of_unfinished_leagues(conn):
+    from app.schema import league_competitions, leagues, users
+
+    uid = conn.execute(insert(users).values(telegram_id=1).returning(users.c.id)).scalar()
+    for status, comps in [("open", [2021]), ("active", [2014, 2021]), ("settled", [2002]),
+                          ("cancelled", [2003])]:
+        lid = conn.execute(insert(leagues).values(
+            name=status, creator_id=uid, invite_code=status, window_start=NOW.date(),
+            window_end=NOW.date(), status=status).returning(leagues.c.id)).scalar()
+        conn.execute(insert(league_competitions), [{"league_id": lid, "competition_id": c} for c in comps])
+    assert matchdata.priority_competition_ids(conn, NOW) == [2014, 2021]
 
 
 def test_failing_competition_does_not_block_others_or_starve(conn):

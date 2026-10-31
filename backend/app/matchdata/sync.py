@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import Connection, and_, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 
-from app.schema import competition_sync, matches
+from app.schema import competition_sync, league_competitions, leagues, matches
 
 MAX_COMPETITIONS_PER_TICK = 8  # football-data.org free tier allows 10 requests/minute
 LIVE_STATUSES = ("IN_PLAY", "PAUSED")
@@ -13,12 +13,13 @@ NEAR_KICKOFF_AFTER = timedelta(hours=1)
 
 
 def priority_competition_ids(conn: Connection, now: datetime) -> list[int]:
-    """Competitions to refresh first because a League depends on them.
-
-    Seam for #13: return the Competitions of active Leagues (Window running or about
-    to start). Leagues do not exist yet, so nothing is prioritised on that account.
-    """
-    return []
+    """Competitions to refresh first because a League depends on them: those of every
+    League that is not finished (open, active or settling)."""
+    return sorted(set(conn.execute(
+        select(league_competitions.c.competition_id)
+        .join(leagues, leagues.c.id == league_competitions.c.league_id)
+        .where(leagues.c.status.in_(("open", "active", "settling")))
+    ).scalars()))
 
 
 def _near_kickoff_competitions(conn: Connection, now: datetime) -> set[int]:
