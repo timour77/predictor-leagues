@@ -61,6 +61,10 @@ export default function App() {
         {tab === 'profile' && <ProfilePage user={user} onLogout={handleLogout} />}
       </main>
 
+      <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)', padding: '2px 0' }}>
+        Football data provided by the Football-Data.org API
+      </div>
+
       <nav className="nav-tabs">
         {TABS.map(t => (
           <button
