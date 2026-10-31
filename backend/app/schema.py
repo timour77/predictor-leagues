@@ -124,7 +124,7 @@ tips = Table(
     Column("status", Text, nullable=False, server_default="pending"),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint("amount > 0", name="tips_amount"),
-    CheckConstraint("status IN ('pending','paid')", name="tips_status"),
+    CheckConstraint("status IN ('pending','paid','refunded')", name="tips_status"),
 )
 
 # Append-only journal of successful_payment updates; UNIQUE charge id makes redelivery a no-op.
@@ -140,6 +140,7 @@ payment_events = Table(
     Column("currency", Text, nullable=False),
     Column("raw", JSONB, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("refunded_at", DateTime(timezone=True)),
 )
 
 # Settlement (#15). `final_standings` fixes the result when a League settles, so later data
