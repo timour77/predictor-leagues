@@ -46,3 +46,10 @@ export function showBackButton(onBack) {
   bb.hide()
   return () => {}
 }
+
+// Legal pages are static files served next to the app; open them in Telegram's in-app browser.
+export function openLegal(page) {
+  const url = `${window.location.origin}/${page}`
+  if (tg?.openLink) tg.openLink(url)
+  else window.open(url, '_blank')
+}

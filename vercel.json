@@ -5,7 +5,9 @@
     {
       "source": "/api/:path*",
       "destination": "/api/index"
-    }
+    },
+    { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/privacy", "destination": "/privacy.html" }
   ],
   "crons": [
     {

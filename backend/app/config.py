@@ -23,3 +23,9 @@ MATCHDATA_COMPETITION_IDS = [
 ]
 # Value Telegram echoes in `X-Telegram-Bot-Api-Secret-Token` (set via setWebhook secret_token).
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+# Use Telegram's test server (`/bot<token>/test/METHOD`); test bots only exist there.
+TELEGRAM_TEST_ENV = os.getenv("TELEGRAM_TEST_ENV", "").lower() in ("1", "true", "yes")
+# Public https origin of the deployed app (no trailing slash): Mini App, /terms and /privacy pages.
+PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
+# How users reach the operator: shown by /support and /paysupport (e.g. "@handle" or an email).
+SUPPORT_CONTACT = os.getenv("SUPPORT_CONTACT", "")
