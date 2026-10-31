@@ -2,14 +2,14 @@
 
 Settlement and Cancellation (#15).
 
-Revision ID: 0004
-Revises: 0003
+Revision ID: 0005
+Revises: 0004
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0004"
-down_revision = "0003"
+revision = "0005"
+down_revision = "0004"
 branch_labels = None
 depends_on = None
 
