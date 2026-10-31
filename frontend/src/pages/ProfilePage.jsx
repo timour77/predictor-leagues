@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { api } from '../services/api'
 import { Page } from '../components/Page'
 import { Avatar } from '../components/Avatar'
 import { TipSheet } from '../components/TipSheet'
@@ -6,8 +7,8 @@ import { memberName } from '../utils/format'
 
 export function ProfilePage({ me, nav }) {
   const [tip, setTip] = useState(false)
-  // `trophies` comes from /me once Settlement (#15) ships; hidden until then.
-  const trophies = me.trophies ?? me.trophy_count
+  const [trophies, setTrophies] = useState(null)
+  useEffect(() => { api.myTrophies().then(d => setTrophies(d.trophies)).catch(() => {}) }, [])
   const m = { ...me, user_id: me.id }
   return (
     <Page title="Profile" onBack={nav.back}>
@@ -15,8 +16,18 @@ export function ProfilePage({ me, nav }) {
         <Avatar member={m} />
         <div><b>{memberName(m)}</b></div>
         {me.username && <div className="muted sm">@{me.username}</div>}
-        {trophies != null && <div style={{ marginTop: 6 }}>🏆 × {trophies}</div>}
+        {trophies?.length > 0 && <div style={{ marginTop: 6 }}>🏆 × {trophies.length}</div>}
       </div>
+      {trophies?.length > 0 && (
+        <div className="card">
+          <b>Trophies</b>
+          {trophies.map(t => (
+            <div key={t.league_id} className="sm" style={{ marginTop: 4 }}>
+              🏆 {t.league_name} <span className="muted">· {t.points} pts, {t.exact} exact</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="card">
         <b>Support the developer</b>
         <div className="muted sm">Tips in ⭐ Stars. Nothing in return that affects play.</div>

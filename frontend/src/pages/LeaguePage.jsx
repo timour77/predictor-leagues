@@ -27,8 +27,9 @@ export function LeaguePage({ leagueId, me, nav }) {
 
   if (!league) return <Page title="League" onBack={nav.back}><ErrorMsg error={error} />{!error && <Loading />}</Page>
 
-  const winners = league.status === 'settled' && standings
-    ? standings.standings.filter(r => r.rank === 1) : []
+  // Settlement decides the winners (nobody wins if nothing was scored), so trust `winner_ids`.
+  const winners = (league.winner_ids ?? [])
+    .map(id => league.members.find(m => m.user_id === id) ?? { user_id: id })
 
   return (
     <Page title={league.name} onBack={nav.home}>
