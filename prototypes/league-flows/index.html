@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>PROTOTYPE — League flows (throwaway)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--el:#334155;--tx:#f1f5f9;--mu:#94a3b8;--ac:#3b82f6;--gr:#10b981;--ye:#f59e0b;--rd:#ef4444}
+*{box-sizing:border-box}body{margin:0;background:#020617;color:var(--tx);font:14px system-ui,sans-serif;display:flex;gap:24px;justify-content:center;padding:16px;flex-wrap:wrap}
+button{font:inherit;color:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--el);cursor:pointer}
+button.p{background:var(--ac);font-weight:600}button.g{background:var(--gr);font-weight:600}button:disabled{opacity:.4;cursor:default}
+input{font:inherit;color:var(--tx);background:var(--el);border:0;border-radius:10px;padding:10px;width:100%}
+#phone{width:390px;height:780px;background:var(--bg);border-radius:28px;border:6px solid #000;display:flex;flex-direction:column;overflow:hidden;position:relative}
+#top{padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--el);font-weight:700}
+#top .back{padding:4px 10px}#main{flex:1;overflow:auto;padding:14px}
+#tabs{display:flex;border-top:1px solid var(--el)}#tabs button{flex:1;border-radius:0;background:none;padding:12px 4px;color:var(--mu)}#tabs button.on{color:var(--tx);border-top:2px solid var(--ac)}
+.card{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:8px}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.chip{display:inline-block;padding:6px 10px;border-radius:99px;background:var(--el);margin:0 6px 6px 0;cursor:pointer;font-size:13px}.chip.on{background:var(--ac)}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--el)}.live{background:var(--rd)}.ok{background:var(--gr)}.warn{background:var(--ye);color:#000}
+.score{display:flex;align-items:center;gap:6px;font-size:22px;font-weight:700}.step{display:flex;flex-direction:column;align-items:center;gap:2px}.step button{padding:2px 12px}
+.who{display:inline-flex;gap:4px;margin-top:6px}.av{width:26px;height:26px;border-radius:50%;background:var(--el);display:grid;place-items:center;font-size:11px;position:relative}.av.d{background:var(--gr)}
+table{width:100%;border-collapse:collapse}td,th{padding:7px 4px;text-align:left}th{color:var(--mu);font-weight:500;font-size:12px}tr.me{background:#1d4ed855}
+.sheet{position:absolute;inset:0;background:#000a;display:flex;align-items:flex-end}.sheet>div{background:var(--card);width:100%;padding:18px;border-radius:20px 20px 0 0}
+#demo{width:300px;background:#111827;border-radius:14px;padding:14px;align-self:flex-start}#demo button{display:block;width:100%;margin-bottom:8px;text-align:left}
+#demo h3{margin:0 0 4px}.pill{background:#7c3aed;color:#fff;padding:2px 8px;border-radius:99px;font-size:11px}
+</style></head><body>
+<div id="phone"><div id="top"></div><div id="main"></div><div id="tabs"></div></div>
+<div id="demo"></div>
+<script>
+// ---------- PROTOTYPE: mock data, in-memory only ----------
+const ME='You', FRIENDS=['Alex','Maria','Dima','Kate'];
+const COMPS={'Premier League':1,'Champions League':1,'La Liga':1,'World Cup':1};
+const POOL=[['Premier League','Man City','Arsenal'],['Premier League','Liverpool','Chelsea'],['Premier League','Spurs','Newcastle'],
+ ['Champions League','Real Madrid','Bayern'],['Champions League','PSG','Inter'],['Champions League','Barcelona','Dortmund'],
+ ['La Liga','Sevilla','Valencia'],['La Liga','Atletico','Betis'],['World Cup','Brazil','France'],['World Cup','Spain','Germany']];
+let uid=1,S={screen:'home',lid:null,tab:'matches',sheet:null,trophies:1,draft:{name:'',comps:['Premier League'],from:'2026-11-07',to:'2026-11-30'},scores:{}};
+const rnd=n=>Math.floor(Math.random()*n);
+const sign=(h,a)=>Math.sign(h-a);
+function mkLeague(o){const L={id:uid++,name:o.name,comps:o.comps,from:o.from,to:o.to,creator:ME,members:[ME],status:'upcoming',official:false,matches:[],preds:{}};
+ POOL.filter(p=>L.comps.includes(p[0])).forEach((p,i)=>L.matches.push({id:L.id*100+i,comp:p[0],home:p[1],away:p[2],ko:'Sat '+(12+i*2)+':00',st:'sched',res:null}));return L}
+function seedOthers(L){L.members.filter(m=>m!==ME).forEach(m=>L.matches.forEach(x=>{if(Math.random()<.8){(L.preds[x.id]=L.preds[x.id]||{})[m]=[rnd(4),rnd(3)]}}))}
+const L0=mkLeague({name:'Office Cup',comps:['Premier League','Champions League'],from:'2026-10-01',to:'2026-11-30'});
+L0.members=[ME,...FRIENDS.slice(0,3)];L0.status='active';seedOthers(L0);
+L0.matches.slice(0,3).forEach(m=>{m.st='ft';m.res=[rnd(4),rnd(3)];(L0.preds[m.id]=L0.preds[m.id]||{})[ME]=[rnd(3),rnd(3)]});L0.matches[3].st='live';L0.matches[3].res=[1,0];
+const leagues=[L0];
+const L=()=>leagues.find(l=>l.id===S.lid);
+const pts=(p,r)=>!p||!r?0:(sign(p[0],p[1])===sign(r[0],r[1])?1:0)+(p[0]===r[0]&&p[1]===r[1]?3:0);
+function stand(l){const t=l.members.map(m=>({m,pts:0,ex:0}));l.matches.filter(x=>x.st==='ft').forEach(x=>t.forEach(r=>{const p=(l.preds[x.id]||{})[r.m];const s=pts(p,x.res);r.pts+=s;if(s===4)r.ex++}));
+ return t.sort((a,b)=>b.pts-a.pts||b.ex-a.ex)}
+// ---------- navigation ----------
+const go=(screen,extra={})=>{Object.assign(S,{screen,sheet:null},extra);render()};
+const open=id=>go('league',{lid:id,tab:'matches'});
+const av=m=>`<div class="av ${''}">${m[0]}</div>`;
+// ---------- screens ----------
+function Home(){return {title:'Predictor Leagues',body:`
+ <div class="row" style="margin-bottom:10px"><b>My Leagues</b><span class="sp"></span><button class="p" onclick="go('create')">+ New League</button></div>
+ ${leagues.map(l=>`<div class="card" onclick="open(${l.id})" style="cursor:pointer"><div class="row"><b>${l.name}</b><span class="sp"></span>${stBadge(l)}</div>
+ <div class="mu sm">${l.comps.join(', ')} · ${l.from} → ${l.to}</div><div class="mu sm">${l.members.length} members${l.creator===ME?' · you are Creator':''}</div></div>`).join('')}
+ <div class="card"><div class="row"><span>🏆</span><b>Trophies: ${S.trophies}</b></div></div>
+ <div class="card"><div class="mu sm">Opened by a friend's link instead? Demo: <a href="#" onclick="go('join');return false" style="color:var(--ac)">open invite from Maria</a></div></div>`}}
+function stBadge(l){return {upcoming:'<span class="badge warn">Starts '+l.from+'</span>',active:'<span class="badge ok">Active</span>',settled:'<span class="badge">🏆 Settled</span>',cancelled:'<span class="badge live">Cancelled</span>'}[l.status]}
+function Create(){const d=S.draft;return {title:'New League',back:'home',body:`
+ <p class="mu sm">Free to join. Winner gets a Trophy.</p>
+ <div class="mu sm">League name</div><input value="${d.name}" placeholder="e.g. Friday Football" oninput="S.draft.name=this.value"><br><br>
+ <div class="mu sm">Competitions (one or more)</div><div>${Object.keys(COMPS).map(c=>`<span class="chip ${d.comps.includes(c)?'on':''}" onclick="tog('${c}')">${c}</span>`).join('')}</div><br>
+ <div class="mu sm">Window — only matches inside count</div>
+ <div class="row"><input type="date" value="${d.from}" onchange="S.draft.from=this.value"><input type="date" value="${d.to}" onchange="S.draft.to=this.value"></div>
+ <p class="mu sm">Joining closes when the first match of the Window kicks off. Needs 2+ Members by then or the League is cancelled.</p>
+ <div class="card sm">Matches in window: <b>${POOL.filter(p=>d.comps.includes(p[0])).length}</b></div>
+ <button class="p" style="width:100%" ${d.comps.length&&d.name?'':'disabled'} onclick="create()">Create League</button>`}}
+function tog(c){const a=S.draft.comps;a.includes(c)?a.splice(a.indexOf(c),1):a.push(c);render()}
+function create(){const l=mkLeague(S.draft);leagues.push(l);S.draft={name:'',comps:['Premier League'],from:'2026-11-07',to:'2026-11-30'};go('invite',{lid:l.id})}
+function Invite(){const l=L();return {title:'Invite friends',back:'league',body:`
+ <div class="card" style="text-align:center"><div style="font-size:40px">✉️</div><b>${l.name}</b><div class="mu sm">${l.comps.join(', ')} · ${l.from} → ${l.to}</div></div>
+ <div class="card sm mu">t.me/predictor_bot/app?startapp=join_${l.id}x7Qk</div>
+ <button class="p" style="width:100%;margin-bottom:8px" onclick="alert('Opens Telegram share sheet with the link')">Share in Telegram</button>
+ <button style="width:100%;margin-bottom:12px" onclick="this.textContent='Copied ✓'">Copy link</button>
+ <b>Members (${l.members.length})</b>${l.members.map(m=>`<div class="row" style="margin-top:6px">${av(m)}${m}${m===ME?'<span class="badge">Creator</span>':''}</div>`).join('')}
+ <p class="mu sm">Anyone with the link can join for free until the first match kicks off.</p>
+ <button style="width:100%" onclick="open(${l.id})">Go to League</button>`}}
+function Join(){return {title:'Invitation',back:'home',body:`
+ <div class="card" style="text-align:center"><div style="font-size:40px">⚽</div><b>Maria invited you to</b><h2 style="margin:6px 0">Sunday Derby</h2>
+ <div class="mu sm">Premier League, La Liga · 2026-11-07 → 2026-11-30</div><div class="mu sm">3 members: Maria, Alex, Dima</div><div class="mu sm">First kickoff: Sat 12:00</div></div>
+ <div class="card sm"><b>Free to join.</b> Predict exact scores: 1 pt for outcome, +3 for exact score. Winner gets a 🏆 Trophy.</div>
+ <button class="g" style="width:100%" onclick="joined()">Join League — free</button>
+ <p class="mu sm">Edge states: after first kickoff the button becomes "Joining closed".</p>`}}
+function joined(){const l=mkLeague({name:'Sunday Derby',comps:['Premier League','La Liga'],from:'2026-11-07',to:'2026-11-30'});l.creator='Maria';l.members=['Maria','Alex','Dima',ME];l.status='active';seedOthers(l);leagues.push(l);open(l.id)}
+function League(){const l=L();let b='';
+ if(l.status==='cancelled')b+=`<div class="card" style="border:1px solid var(--rd)"><b>League cancelled</b><div class="sm mu">Fewer than 2 Members when the Window started. Creator was notified. Nothing was charged.</div></div>`;
+ if(l.status==='upcoming')b+=`<div class="card" style="border:1px solid var(--ye)"><b>Starts ${l.from}</b><div class="sm mu">${l.members.length} member${l.members.length>1?'s':''}. You can already predict. Need 2+ to start.</div><button style="margin-top:8px" onclick="go('invite')">Invite friends</button></div>`;
+ if(l.status==='settled'){const w=winners(l);b+=`<div class="card" style="border:1px solid var(--ye);text-align:center"><div style="font-size:42px">🏆</div><b>${w.join(' & ')} won ${l.name}</b><div class="sm mu">${w.includes(ME)?'Trophy added to your profile!':'Trophy added to their profile.'}</div>
+  <div class="sm mu" style="margin-top:8px">Had fun? <a href="#" style="color:var(--ac)" onclick="S.sheet='tip';render();return false">Leave a tip to the developer ⭐</a></div></div>`}
+ b+={matches:Matches,standings:Standings,history:History,members:Members}[S.tab](l);
+ return {title:l.name,back:'home',body:b,tabs:true}}
+function Matches(l){const open=l.status==='upcoming'||l.status==='active';
+ return l.matches.map(x=>{const mine=(l.preds[x.id]||{})[ME];const dr=S.scores[x.id]||mine||[0,0];const locked=x.st!=='sched'||!open;
+ const others=l.members.filter(m=>m!==ME);
+ return `<div class="card"><div class="row sm mu"><span>${x.comp}</span><span class="sp"></span>${x.st==='sched'?'Kickoff '+x.ko:x.st==='live'?'<span class="badge live">LIVE '+x.res.join(':')+'</span>':'<span class="badge">FT '+x.res.join(':')+'</span>'}</div>
+ <div class="row" style="margin:8px 0"><b class="sp">${x.home}</b>${locked?`<div class="score">${mine?mine.join(' : '):'— : —'}</div>`:
+  `<div class="score"><div class="step"><button onclick="bump(${x.id},0,1)">+</button>${dr[0]}<button onclick="bump(${x.id},0,-1)">−</button></div>:<div class="step"><button onclick="bump(${x.id},1,1)">+</button>${dr[1]}<button onclick="bump(${x.id},1,-1)">−</button></div></div>`}<b class="sp" style="text-align:right">${x.away}</b></div>
+ ${locked?`<div class="sm mu">Your prediction ${mine?'':'— <span style="color:var(--rd)">missed, 0 pts</span>'}${x.st==='ft'&&mine?` · <b style="color:var(--gr)">+${pts(mine,x.res)} pts</b>`:''}</div>`:
+  `<div class="row"><button class="p sp" onclick="save(${x.id})">${mine?'Update':'Save'} prediction</button>${mine?`<button onclick="withdraw(${x.id})">Withdraw</button>`:''}</div>
+  <div class="sm mu" style="margin-top:6px">${mine?'Saved '+mine.join(':')+' · editable until kickoff':'Not predicted yet'}</div>`}
+ ${x.st==='sched'?`<div class="sm mu" style="margin-top:6px">Who has predicted <span class="who">${others.map(m=>`<span class="av ${(l.preds[x.id]||{})[m]?'d':''}" title="${m}">${m[0]}</span>`).join('')}</span> <span class="sm">· scores revealed at kickoff</span></div>`:
+  `<table class="sm" style="margin-top:6px">${l.members.filter(m=>m!==ME).map(m=>{const p=(l.preds[x.id]||{})[m];return `<tr><td>${m}</td><td>${p?p.join(' : '):'<span class="mu">missed</span>'}</td><td>${x.st==='ft'?'+'+pts(p,x.res):''}</td></tr>`}).join('')}</table>`}
+ </div>`}).join('')}
+const bump=(id,i,d)=>{const l=L();const c=(S.scores[id]||(l.preds[id]||{})[ME]||[0,0]).slice();c[i]=Math.max(0,c[i]+d);S.scores[id]=c;render()};
+const save=id=>{const l=L();(l.preds[id]=l.preds[id]||{})[ME]=S.scores[id]||[0,0];delete S.scores[id];render()};
+const withdraw=id=>{delete L().preds[id][ME];delete S.scores[id];render()};
+function Standings(l){const t=stand(l);const medal=['🥇','🥈','🥉'];
+ return `<div class="card"><table><tr><th>#</th><th>Member</th><th>Exact</th><th>Pts</th></tr>${t.map((r,i)=>`<tr class="${r.m===ME?'me':''}"><td>${medal[i]||i+1}</td><td>${r.m}</td><td>${r.ex}</td><td><b>${r.pts}</b></td></tr>`).join('')}</table></div>
+ <div class="sm mu">Ties on points → more exact scores. Still tied → all tied Members win a Trophy.</div>`}
+function History(l){const fin=l.matches.filter(x=>x.st!=='sched');if(!fin.length)return '<p class="mu">History appears once matches kick off.</p>';
+ return `<div class="card" style="overflow:auto"><table class="sm"><tr><th>Match</th>${l.members.map(m=>`<th>${m[0]}</th>`).join('')}</tr>${fin.map(x=>`<tr><td>${x.home.slice(0,3)}–${x.away.slice(0,3)}<br><b>${x.res.join(':')}</b>${x.st==='live'?' live':''}</td>${l.members.map(m=>{const p=(l.preds[x.id]||{})[m];return `<td>${p?p.join(':'):'—'}<br><span class="mu">${x.st==='ft'?'+'+pts(p,x.res):''}</span></td>`}).join('')}</tr>`).join('')}</table></div>`}
+function Members(l){return `<div class="card">${l.members.map(m=>`<div class="row" style="padding:5px 0">${av(m)}${m}<span class="sp"></span>${m===l.creator?'<span class="badge">Creator</span>':''}</div>`).join('')}</div>
+ ${l.status==='upcoming'?'<button style="width:100%" onclick="go(\'invite\')">Invite more</button>':''}`}
+function winners(l){const t=stand(l);return t.filter(r=>r.pts===t[0].pts&&r.ex===t[0].ex).map(r=>r.m)}
+function Profile(){return {title:'Profile',back:'home',body:`<div class="card" style="text-align:center"><div style="font-size:40px">👤</div><b>You</b><div>🏆 × ${S.trophies}</div></div>
+ <div class="card"><b>Support the developer</b><div class="sm mu">Tips in ⭐ Stars. Nothing in return that affects play.</div><button class="p" style="margin-top:8px" onclick="S.sheet='tip';render()">Leave a tip</button></div>`}}
+function Tip(){return `<div class="sheet"><div><b>Leave a tip ⭐</b><div class="sm mu">Voluntary. Doesn't change points, standings or anything in a League.</div><div class="row" style="margin:12px 0">${[10,50,100].map(n=>`<button class="sp" onclick="alert('Telegram Stars invoice for ${n} ⭐ opens here');S.sheet=null;render()">${n} ⭐</button>`).join('')}</div><button style="width:100%" onclick="S.sheet=null;render()">Not now</button></div></div>`}
+// ---------- render ----------
+function render(){const scr={home:Home,create:Create,invite:Invite,join:Join,league:League,profile:Profile}[S.screen]();
+ const t=document.getElementById('top');t.innerHTML=(scr.back?`<button class="back" onclick="go('${scr.back==='league'?'league':scr.back}')">‹</button>`:'')+`<span class="sp">${scr.title}</span>`+(S.screen==='home'?`<button onclick="go('profile')">👤</button>`:'');
+ document.getElementById('main').innerHTML=scr.body+(S.sheet==='tip'?Tip():'');
+ document.getElementById('tabs').innerHTML=scr.tabs?[['matches','Matches'],['standings','Standings'],['history','History'],['members','Members']].map(([k,n])=>`<button class="${S.tab===k?'on':''}" onclick="S.tab='${k}';render()">${n}</button>`).join(''):'';
+ demo()}
+// ---------- demo controls (stand-in for time and other users) ----------
+function demo(){const l=S.lid&&S.screen==='league'?L():null;const b=(t,f,dis)=>`<button ${dis?'disabled':''} onclick="${f};render()">${t}</button>`;
+ document.getElementById('demo').innerHTML=`<h3>Demo controls <span class="pill">PROTOTYPE</span></h3><p class="mu sm">Simulates things that happen outside the app. Open a League first.</p>`+(l?`
+ <div class="mu sm">Current: ${l.name} (${l.status})</div><br>
+ ${b('👥 A friend joins via link',"friendJoins()",l.status!=='upcoming'||l.members.length>=5)}
+ ${b('📅 Window starts (cancels if <2 members)',"startWindow()",l.status!=='upcoming')}
+ ${b('⚽ Kick off next match (Reveal)',"kick()",l.status!=='active'||!l.matches.some(x=>x.st==='sched'))}
+ ${b('🏁 Finish live match',"finish()",l.status!=='active'||!l.matches.some(x=>x.st==='live'))}
+ ${b('⏳ Grace period over → Settlement',"settle()",l.status!=='active'||l.matches.some(x=>x.st!=='ft'))}
+ ${b('⏩ Fast-forward everything',"ff()",l.status!=='active')}`:'')+`<br><div class="mu sm">Not covered on purpose: Official Leagues, Paid features, rescheduled/dropped matches.</div>`}
+function friendJoins(){const l=L();const n=FRIENDS.find(f=>!l.members.includes(f));if(n)l.members.push(n)}
+function startWindow(){const l=L();if(l.members.length<2){l.status='cancelled';return}l.status='active';seedOthers(l)}
+function kick(){const x=L().matches.find(m=>m.st==='sched');x.st='live';x.res=[rnd(3),rnd(2)]}
+function finish(){const x=L().matches.find(m=>m.st==='live');x.st='ft';x.res=[rnd(4),rnd(3)]}
+function settle(){const l=L();l.status='settled';if(winners(l).includes(ME))S.trophies++}
+function ff(){const l=L();l.matches.forEach(x=>{if(x.st!=='ft'){x.st='ft';x.res=[rnd(4),rnd(3)]}});settle()}
+render();
+</script></body></html>
