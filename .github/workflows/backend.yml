@@ -1,0 +1,45 @@
+name: backend
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", "requirements.txt", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", "requirements.txt", ".github/workflows/backend.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: pw, POSTGRES_DB: pl }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:pw@localhost:5432/pl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r backend/requirements-dev.txt
+      - run: pytest
+        working-directory: backend
+
+  # Deploy step: apply migrations to Neon (direct URL) before/alongside the Vercel deploy.
+  # Migrations must stay backward compatible with the previous app version (expand, then contract).
+  migrate:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    concurrency: migrate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r backend/requirements.txt
+      - run: alembic upgrade head
+        working-directory: backend
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}

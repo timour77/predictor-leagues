@@ -6,15 +6,29 @@ Telegram Mini App для прогнозов на футбольные матчи
 
 ### Backend
 
+Нужен Postgres (локально: `docker run -d --name pl-pg -e POSTGRES_PASSWORD=pw -e POSTGRES_DB=pl -p 5432:5432 postgres:16`).
+
 ```bash
 cd backend
-python3.12 -m venv venv          # только первый раз
-venv/bin/pip install -r requirements.txt  # только первый раз
+python3.12 -m venv venv                              # только первый раз
+venv/bin/pip install -r requirements-dev.txt         # только первый раз
+cp .env.example .env                                 # заполнить DATABASE_URL, DATABASE_URL_DIRECT, BOT_TOKEN
+venv/bin/alembic upgrade head                        # миграции (прямой URL)
 venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 API доступен на http://localhost:8000  
 Документация: http://localhost:8000/docs
+
+Авторизация: каждый запрос несёт `Authorization: tma <Telegram.WebApp.initData>`; бэкенд проверяет HMAC и `auth_date` (без паролей, JWT и сессий).
+
+Тесты (интеграционные нужен пустой Postgres — схема пересоздаётся!):
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:pw@localhost:5432/pl venv/bin/pytest
+```
+
+Миграции на проде выполняет job `migrate` в `.github/workflows/backend.yml` (секрет `DATABASE_URL_DIRECT`). Операторские действия — скрипты в `backend/scripts/`, HTTP admin нет.
 
 ### Frontend
 
@@ -28,7 +42,7 @@ npm run dev
 
 ## API ключ
 
-football-data.org API ключ уже прописан в `backend/.env`.
+football-data.org API ключ — в `backend/.env` (см. `backend/.env.example`).
 
 ## Чемпионаты (реальные ID)
 
