@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from app.routers import cron, matches, me
+from app.errors import DomainError
+from app.routers import cron, leagues, matches, me
 
 app = FastAPI(title="Predictor Leagues API", version="2.0.0")
 
@@ -14,10 +16,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Domain routers (Leagues, Predictions, Payments, cron tick) are added by #12-#15.
+# Domain routers (Payments, Settlement) are added by #14-#15.
 app.include_router(me.router, prefix="/api", tags=["me"])
 app.include_router(matches.router, prefix="/api", tags=["matches"])
+app.include_router(leagues.router, prefix="/api", tags=["leagues"])
 app.include_router(cron.router, prefix="/api", tags=["cron"])
+
+
+@app.exception_handler(DomainError)
+def domain_error(request: Request, exc: DomainError):
+    # Raising rolls back the request transaction (get_conn), so nothing half-done is kept.
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
 
 @app.get("/api/health")
