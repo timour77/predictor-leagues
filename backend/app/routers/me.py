@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import Connection, and_, select
+from pydantic import BaseModel
+from sqlalchemy import Connection, and_, select, update
 
 from app.auth import get_current_user
 from app.db import get_conn
-from app.schema import final_standings, leagues, trophies
+from app.schema import final_standings, leagues, trophies, users
 
 router = APIRouter()
 
@@ -16,7 +17,18 @@ def me(user: dict = Depends(get_current_user)):
         "username": user["username"],
         "first_name": user["first_name"],
         "photo_url": user["photo_url"],
+        "reminders_enabled": user["reminders_enabled"],
     }
+
+
+class RemindersBody(BaseModel):
+    enabled: bool
+
+
+@router.put("/me/reminders")
+def set_reminders(body: RemindersBody, user: dict = Depends(get_current_user), conn: Connection = Depends(get_conn)):
+    conn.execute(update(users).where(users.c.id == user["id"]).values(reminders_enabled=body.enabled))
+    return {"reminders_enabled": body.enabled}
 
 
 @router.get("/me/trophies")

@@ -29,3 +29,6 @@ TELEGRAM_TEST_ENV = os.getenv("TELEGRAM_TEST_ENV", "").lower() in ("1", "true", 
 PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
 # How users reach the operator: shown by /support and /paysupport (e.g. "@handle" or an email).
 SUPPORT_CONTACT = os.getenv("SUPPORT_CONTACT", "")
+# Mini App direct link used for Reminder buttons, e.g. https://t.me/<bot>/<app_short_name>.
+# Empty: Reminders are sent without a button.
+MINI_APP_LINK = os.getenv("MINI_APP_LINK", "")

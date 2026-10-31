@@ -10,7 +10,7 @@ from typing import Callable
 
 from sqlalchemy import Connection, delete, func, insert, select, update
 
-from app import leagues as leagues_mod, notifications, standings as standings_mod
+from app import leagues as leagues_mod, notifications, reminders, standings as standings_mod
 from app.errors import Conflict
 from app.schema import final_standings, league_members, leagues, trophies
 
@@ -159,9 +159,10 @@ def _utcnow() -> datetime:
 
 
 def tick_steps(sender: notifications.Sender, now_fn: Callable[[], datetime] = _utcnow) -> list:
-    """The tick steps of this module, in order: start/Cancel, settle, then deliver the outbox."""
+    """The tick steps of this module, in order: start/Cancel, settle, then queue Reminders, then deliver the outbox."""
     return [
         ("start_leagues", lambda conn: start_leagues(conn, now_fn())),
         ("settle_leagues", lambda conn: settle_leagues(conn, now_fn())),
+        ("queue_reminders", lambda conn: reminders.queue_reminders(conn, now_fn())),
         ("deliver_notifications", lambda conn: notifications.deliver_pending(conn, sender, now_fn())),
     ]
